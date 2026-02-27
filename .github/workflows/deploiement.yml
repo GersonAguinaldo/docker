@@ -1,0 +1,70 @@
+name: Deploy Echo API to Production
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+jobs:
+    deploy:
+        name: Build & Deploy Docker
+        runs-on: ubuntu-latest
+        
+        steps:
+            - name: Deploy via SSH
+              uses: appleboy/ssh-action@v1
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  key: ${{ secrets.PRIVATE_KEY }}
+                  passphrase: ${{ secrets.SSH_PASSPHRASE }}
+                  port: ${{ secrets.SSH_PORT }}
+                  command_timeout: 30m
+                  script: |
+                      set -e
+                      echo "=== DÉPLOIEMENT ECHO API - PRODUCTION ==="
+                      
+                      DEPLOY_PATH="${{ secrets.SSH_SERVER_PATH }}"
+                      GIT_REPO="https://${{ secrets.GIT_PATH }}@github.com/gersonsing/Docker.git"
+                      
+                      echo "=== 1. Préparation du répertoire ==="
+                      mkdir -p "$DEPLOY_PATH"
+                      cd "$DEPLOY_PATH"
+                      
+                      if [ -d .git ]; then
+                          echo "Mise à jour du repo..."
+                          git fetch origin --prune
+                          git reset --hard origin/main
+                          git clean -fd
+                      else
+                          echo "Clonage du repo..."
+                          rm -rf * .[!.]* 2>/dev/null || true
+                          git clone --depth=1 --branch main "$GIT_REPO" .
+                      fi
+                      
+                      echo "Commit: $(git log -1 --oneline)"
+                      
+                      echo "=== 2. Vérification Docker ==="
+                      docker --version
+                      docker compose version
+                      
+                      echo "=== 3. Arrêt des anciens containers ==="
+                      docker compose down --remove-orphans 2>/dev/null || true
+                      docker stop echo-api 2>/dev/null || true
+                      docker rm echo-api 2>/dev/null || true
+                      
+                      echo "=== 4. Build de l'image Docker ==="
+                      docker compose build --no-cache
+                      
+                      echo "=== 5. Démarrage du container ==="
+                      docker compose up -d
+                      
+                      echo "=== 6. Vérification ==="
+                      sleep 10
+                      docker ps
+                      
+                      # Test de santé de l'API
+                      curl -sf http://localhost:3200 && echo "✅ Echo API OK" || echo "❌ Echo API FAILED"
+                      
+                      echo "=== DÉPLOIEMENT TERMINÉ ==="
