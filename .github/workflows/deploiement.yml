@@ -39,7 +39,7 @@ jobs:
                           git clean -fd
                       else
                           echo "Clonage du repo..."
-                          rm -rf * .[!.]* 2>/dev/null || true
+                          rm -rf ./* ./.??* 2>/dev/null || true
                           git clone --depth=1 --branch main "$GIT_REPO" .
                       fi
                       
