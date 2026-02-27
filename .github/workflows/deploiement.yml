@@ -26,7 +26,7 @@ jobs:
                       echo "=== DÉPLOIEMENT ECHO API - PRODUCTION ==="
                       
                       DEPLOY_PATH="${{ secrets.SSH_SERVER_PATH }}"
-                      GIT_REPO="https://${{ secrets.GIT_PATH }}@github.com/gersonsing/Docker.git"
+                      GIT_REPO="https://${{ secrets.GIT_PATH }}@github.com/gersonaguinaldo/docker.git"
                       
                       echo "=== 1. Préparation du répertoire ==="
                       mkdir -p "$DEPLOY_PATH"
